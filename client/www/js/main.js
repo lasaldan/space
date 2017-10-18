@@ -50,7 +50,7 @@ Main.prototype = {
     update: function() {
 
       velocity = Phaser.Math.distance(this.ship.body.velocity.destination[0], this.ship.body.velocity.destination[1],0,0)
-      console.log(velocity)
+      //console.log(velocity)
 
       if(this.spacebar.isDown) {
 
