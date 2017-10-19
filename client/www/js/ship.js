@@ -5,6 +5,7 @@ var Ship = function() {
   this.nextFire = 0
   this.projectileSpeed = 1500
   this.mass = 100
+  this.topSpeed = 750
 
   this.setPower = function(val) {
     this.enginePower = val
