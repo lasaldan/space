@@ -1,38 +1,80 @@
 var CanvasRenderer = function(targetSelector) {
 
-  this.canvas = document.querySelector(targetSelector) || document.getElementsByTagName("canvas")[0]
-  this.width = this.canvas.width
-  this.height = this.canvas.height
+  var renderer = this
+  renderer.canvas = document.querySelector(targetSelector) || document.getElementsByTagName("canvas")[0]
+  renderer.width = renderer.canvas.width
+  renderer.height = renderer.canvas.height
 
-  if(!this.canvas) {
+  renderer.debugOffset = 10
+  renderer.camera = {}
+
+  if(!renderer.canvas) {
     console.error("No canvas rendering target found.")
     return
   }
 
-  this.ctx = this.canvas.getContext("2d")
+  renderer.ctx = renderer.canvas.getContext("2d")
 
-  this.drawSprite = function(img,x,y,rotation,scale) {
-    if(!scale) scale = .1
+  renderer.render = function(game) {
+    renderer.camera = game.camera
+    renderer.ctx.translate(renderer.camera.x() + renderer.width/2, renderer.camera.y() + renderer.height/2)
+    game.renderOrder.forEach(function(layerId) {
+      game.renderLayers[layerId].forEach(function(sprite) {
+        if(sprite.tiled) {
+          renderer.drawTiledSprite(sprite.image, sprite.x, sprite.y)
+        }
+        else
+          renderer.drawSprite(sprite.image, (sprite.body)? sprite.body.x:sprite.x, (sprite.body)?sprite.body.y:sprite.y, (sprite.body)?sprite.body.rotation:sprite.rotation, sprite.scale)
+      })
+    })
+    renderer.ctx.translate(-renderer.camera.x() - renderer.width/2, -renderer.camera.y() - renderer.height/2)
+    game.renderer.debugText("Speed: " + parseInt(game.sprites.ship.body.velocity.magnitude()))
+    game.renderer.debugText("Sector: " + parseInt(game.sprites.ship.body.x / 100) + ", " + parseInt(game.sprites.ship.body.y / 100))
+
+  }
+
+  renderer.drawSprite = function(img,x,y,rotation,scale) {
+    if(!scale) scale = 1
     if(!rotation) rotation = 0
     var width = img.width*scale
     var height = img.height*scale
-    this.ctx.translate(x - width/2, y - height/2)
-    this.ctx.rotate(rotation*Math.PI/180)
-    this.ctx.drawImage(img, 0, 0, width, height )
-    this.ctx.rotate(-rotation*Math.PI/180)
-    this.ctx.translate(-x + width/2, -y + height/2)
+    renderer.ctx.translate(x , y )
+    renderer.ctx.rotate(rotation*Math.PI/180)
+    renderer.ctx.drawImage(img, -width/2, -width/2, width, height )
+    renderer.ctx.rotate(-rotation*Math.PI/180)
+    renderer.ctx.translate(-x , -y )
   }
 
-  this.drawBackground = function(img,x,y) {
-
-    this.ctx.translate(x, y)
-    var pattern = this.ctx.createPattern(img, 'repeat')
-    this.ctx.fillStyle = pattern
-    this.ctx.fillRect( -x,-y, this.width, this.height)
-    this.ctx.translate(-x, -y)
+  renderer.debugText = function(str) {
+    renderer.ctx.font = '12px Arial'
+    renderer.ctx.fillStyle = '#00FF00'
+    renderer.ctx.fillText(str, 0, renderer.debugOffset)
+    renderer.debugOffset += 14
   }
 
-  this.clear = function() {
-    this.ctx.clearRect(0,0,this.width,this.height);
+  renderer.drawTiledSprite = function(img,x,y) {
+    renderer.ctx.translate(x, y)
+    var pattern = renderer.ctx.createPattern(img, 'repeat')
+    renderer.ctx.fillStyle = pattern
+    renderer.ctx.fillRect( -renderer.width/2 - renderer.camera.x(), -renderer.height/2 - renderer.camera.y(), renderer.width, renderer.height)
+    renderer.ctx.translate(-x, -y)
+  }
+
+  renderer.clear = function() {
+    renderer.ctx.clearRect(0,0,renderer.width,renderer.height);
+    renderer.debugOffset = 10
+  }
+
+  renderer.resize = function() {
+    renderer.width = window.innerWidth
+    renderer.height = window.innerHeight
+    renderer.canvas.width = window.innerWidth
+    renderer.canvas.height = window.innerHeight
+    if(renderer.canvas.webkitRequestFullScreen) {
+      renderer.canvas.webkitRequestFullScreen();
+    }
+    else {
+      renderer.canvas.mozRequestFullScreen();
+    }
   }
 }
