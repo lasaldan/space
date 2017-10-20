@@ -1,4 +1,5 @@
 var express = require('express');
+var phaser = require('phaser')
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io').listen(server);
@@ -16,10 +17,13 @@ function Game() {
     name: "Serenity",
     players: {},
     asteroids: [],
-    stations: []
+    stations: [],
+    size: 5000,
+    background: "bg1.jpg"
   }
 }
 
+var sim = new Phaser.Game(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio, Phaser.HEADLESS);
 server.game = new Game()
 
 server.log = function(msg) {

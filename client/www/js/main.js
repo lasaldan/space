@@ -62,25 +62,6 @@ Main.prototype = {
       }
       return p2Body;
     }
-
-    // function constrainVelocity(sprite, maxVelocity) {
-    //   if (!sprite || !sprite.body) {return;}
-    //   var body = sprite.body
-    //   var angle, currVelocitySqr, vx, vy;
-    //   vx = body.data.velocity[0];
-    //   vy = body.data.velocity[1];
-    //   currVelocitySqr = vx * vx + vy * vy;
-    //   if (currVelocitySqr > maxVelocity * maxVelocity) {
-    //     angle = Math.atan2(vy, vx);
-    //     vx = Math.cos(angle) * maxVelocity;
-    //     vy = Math.sin(angle) * maxVelocity;
-    //     body.data.velocity[0] = vx;
-    //     body.data.velocity[1] = vy;
-    //     console.log('limited speed to: '+maxVelocity);
-    //   }
-    // };
-
-
   },
 
   update: function() {
@@ -124,7 +105,6 @@ Main.prototype = {
     }
     else
     {
-        //this.ship.body.setZeroRotation();
         this.ship.body.angularVelocity *= .9
     }
 
