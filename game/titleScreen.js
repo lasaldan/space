@@ -15,7 +15,9 @@ var TitleScreen = function(game) {
 
     this.bg = game.addSprite("bg", "background", {tiled: true})
     this.bg2 = game.addSprite("bg2", "background", {image: game.images.bg2, tiled: true, offsetRatio: 2})
-    this.ship = game.addSprite("ship", "stage", {scale: .3, x: 0, y: 0})
+    this.ship = game.addSprite("ship", "stage", {scale: .2, x: 0, y: 0})
+    this.ship.nextFire = -1
+    this.ship.fireRate = 100
 
     game.enablePhysicsOn("ship")
 
@@ -46,9 +48,16 @@ var TitleScreen = function(game) {
     }
 
     if(game.keyboard.keys.space) {
-      var bullet = game.addSprite(null, "projectiles", {image: game.images.bullet})
-      game.enablePhysicsOn(bullet.key)
-      console.log(bullet.key)
+      if (time > this.ship.nextFire)
+      {
+        this.ship.nextFire = time + this.ship.fireRate;
+
+        var bullet = game.addSprite(null, "projectiles", {image: game.images.bullet})
+        var x = this.ship.body.x + Math.sin(this.ship.body.rotation*Math.PI/180)*100
+        var y = this.ship.body.y - Math.cos(this.ship.body.rotation*Math.PI/180)*100
+        game.enablePhysicsOn(bullet.key, {lifespan: 3000, x: x, y: y, rotation: this.ship.body.rotation, frictionless: true})
+        bullet.body.thrust(50000)
+      }
     }
 
   }

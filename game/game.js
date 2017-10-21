@@ -1,20 +1,4 @@
-var Sprite = function(options) {
-  var sprite = this
-  sprite.image = options.image
-  sprite.height = options.image.height
-  sprite.width = options.image.width
-  sprite.scale = options.scale || 1
-  sprite.x = options.x || 0
-  sprite.y = options.y || 0
-  sprite.rotation = options.image.rotation || 0
-  sprite.frameCount = options.frameCount || 1
-  sprite.tiled = options.tiled || false
-  sprite.offsetRatio = options.offsetRatio || 0
 
-  sprite.enablePhysics = function(engine, options) {
-    sprite.body = engine.createBody(options)
-  }
-}
 
 var Camera = function() {
   this.tracking = false
@@ -121,8 +105,9 @@ var Game = function() {
     if(!key) key = game.spriteID++
     var options = options || {}
     if(!options.image) options.image = game.images[key]
+    options.key = key
+    options.layerName = layerName
     var sprite = new Sprite(options)
-    sprite.key = key
     game.sprites[key] = sprite
     game.renderLayers[layerName].push(sprite)
     return sprite
@@ -208,5 +193,31 @@ var Game = function() {
 
     game.stepping = true
     game.step()
+  }
+
+
+  var Sprite = function(options) {
+    var sprite = this
+    sprite.layerName = options.layerName
+    sprite.key = options.key
+    sprite.image = options.image
+    sprite.height = options.image.height
+    sprite.width = options.image.width
+    sprite.scale = options.scale || 1
+    sprite.x = options.x || 0
+    sprite.y = options.y || 0
+    sprite.rotation = options.image.rotation || 0
+    sprite.frameCount = options.frameCount || 1
+    sprite.tiled = options.tiled || false
+    sprite.offsetRatio = options.offsetRatio || 0
+
+    sprite.enablePhysics = function(engine, options) {
+      var options = options || {}
+      options.onDelete = function() {
+        delete game.renderLayers[sprite.layerName][sprite.key]
+        //console.log(sprite.key, sprite.layerName)
+      }
+      sprite.body = engine.createBody(options)
+    }
   }
 }

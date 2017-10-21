@@ -15,26 +15,40 @@ var PhysD = function(worldWidth, worldHeight) {
     var t = (time - physics.lastStep) / 1000
     physics.lastStep = time
 
-    physics.bodies.forEach(function(body) {
+    var count = physics.bodies.length
+    for(var i = count-1; i >= 0; i--) {
+      //physics.bodies.forEach(function(body,i) {
+      body = physics.bodies[i]
 
-      var tx = body.velocity.x*t + body.acceleration.x*0.5*t*t
-      var ty = body.velocity.y*t + body.acceleration.y*0.5*t*t
+      if(body) {
+        if(body.lifespan) {
+          if(!body.spawnTime)
+            body.spawnTime = time
 
-      body.x += tx
-      body.y += ty
+          if(time - body.spawnTime > body.lifespan) {
+            body.onDelete()
+            physics.bodies.splice(i,1)
+          }
+        }
 
-      tx = body.velocity.x + body.acceleration.x*t
-      ty = body.velocity.y + body.acceleration.y*t
+        var tx = body.velocity.x*t + body.acceleration.x*0.5*t*t
+        var ty = body.velocity.y*t + body.acceleration.y*0.5*t*t
 
-      body.velocity.x = tx * physics.damping
-      body.velocity.y = ty * physics.damping
+        body.x += tx
+        body.y += ty
 
-      body.acceleration.x = 0
-      body.acceleration.y = 0
+        tx = body.velocity.x + body.acceleration.x*t
+        ty = body.velocity.y + body.acceleration.y*t
 
-      body.rotation += body.angularVelocity*t
+        body.velocity.x = tx * ((body.frictionless)? 1 : physics.damping)
+        body.velocity.y = ty * ((body.frictionless)? 1 : physics.damping)
 
-    })
+        body.acceleration.x = 0
+        body.acceleration.y = 0
+
+        body.rotation += body.angularVelocity*t
+      }
+    }
   }
 
   physics.createBody = function(options) {
@@ -44,9 +58,12 @@ var PhysD = function(worldWidth, worldHeight) {
       y: options.y || 0,
       rotation: options.rotation || 0,
       mass: 100,
-      acceleration: new physics.Vector(options.x || 0, options.y || 0),
-      velocity: new physics.Vector(options.x || 0, options.y || 0),
+      frictionless: options.frictionless || false,
+      lifespan: options.lifespan || false,
+      acceleration: new physics.Vector(options.ax || 0, options.ay || 0),
+      velocity: new physics.Vector(options.vx || 0, options.vy || 0),
       angularVelocity: options.angularVelocity || 0,
+      onDelete: options.onDelete,
       thrust: function(amount) {
         this.acceleration.addInPlace({x: amount*Math.sin(this.rotation*Math.PI/180), y: -amount*Math.cos(this.rotation*Math.PI/180)})
       },
