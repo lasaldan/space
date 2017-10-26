@@ -1,5 +1,4 @@
 var express = require('express');
-var phaser = require('phaser')
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io').listen(server);
@@ -23,7 +22,7 @@ function Game() {
   }
 }
 
-var sim = new Phaser.Game(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio, Phaser.HEADLESS);
+// var sim = new Phaser.Game(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio, Phaser.HEADLESS);
 server.game = new Game()
 
 server.log = function(msg) {
@@ -32,7 +31,7 @@ server.log = function(msg) {
 }
 
 io.on('connection',function(socket){
-  socket.on('newplayer',function(){
+  socket.on('playerConnected',function(){
 
     socket.player = {
       id: socket.id,
@@ -41,13 +40,13 @@ io.on('connection',function(socket){
 
     server.game.players[socket.id] = socket.player
     socket.emit('universe',getUniverse());
-    socket.broadcast.emit('newplayer',socket.player);
+    socket.broadcast.emit('playerConnected',socket.player);
 
     server.log("Player Joined: "+socket.id)
 
     socket.on('disconnect',function(){
       delete server.game.players[socket.id]
-      io.emit('remove',socket.id);
+      io.emit('playerDisconnected',socket.id);
       server.log("Player Disconnected: "+socket.id)
     });
   });
