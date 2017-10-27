@@ -35,14 +35,22 @@ io.on('connection',function(socket){
 
     socket.player = {
       id: socket.id,
-      name: "pilot" + randomInt(0,10)
+      name: "pilot" + randomInt(0,10),
+      spawn_x: 0,
+      spawn_y: 0
     };
 
     server.game.players[socket.id] = socket.player
+    socket.emit('welcome', socket.player)
     socket.emit('universe',getUniverse());
     socket.broadcast.emit('playerConnected',socket.player);
 
     server.log("Player Joined: "+socket.id)
+
+    socket.on('createProjectile', function(data) {
+      // Create projectile locally
+      io.emit("createProjectile", data)
+    })
 
     socket.on('disconnect',function(){
       delete server.game.players[socket.id]
