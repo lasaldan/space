@@ -1,3 +1,4 @@
+
 var PhysD = function(worldWidth, worldHeight) {
   var physics = this
   physics.width = worldWidth
@@ -8,22 +9,8 @@ var PhysD = function(worldWidth, worldHeight) {
 
   physics.bodies = []
   physics.lastStep = undefined
-  physics.NS_PER_SEC = 1e9
-  physics.MS_PER_SEC = 1e6
-  physics.initializeSim = function() {
-    var now = process.hrtime()
-    physics.simStart = now[0]*physics.NS_PER_SEC + now[1]
-  }
 
   physics.stepSim = function(time) {
-
-    if(!time) {
-      var now = process.hrtime()
-      var nsStamp = now[0]*physics.NS_PER_SEC + now[1]
-      time =  nsStamp - physics.simStart
-      time = time/physics.MS_PER_SEC
-    }
-
     if(!physics.lastStep) physics.lastStep = time
 
     var t = (time - physics.lastStep) / 1000
@@ -39,10 +26,10 @@ var PhysD = function(worldWidth, worldHeight) {
           if(!body.spawnTime)
             body.spawnTime = time
 
+          console.log(time - body.spawnTime > body.lifespan)
           if(time - body.spawnTime > body.lifespan) {
-            if(typeof body.onDelete == "function")
-              body.onDelete()
-
+            body.onDelete()
+            console.log("body removed")
             physics.bodies.splice(i,1)
           }
         }
@@ -63,14 +50,8 @@ var PhysD = function(worldWidth, worldHeight) {
         body.acceleration.y = 0
 
         body.rotation += body.angularVelocity*t
-
-        body.angularVelocity *= .7
       }
     }
-  }
-
-  physics.destroyBody = function(id) {
-    delete physics.bodies[id]
   }
 
   physics.createBody = function(options) {
@@ -151,7 +132,6 @@ var PhysD = function(worldWidth, worldHeight) {
 module.exports = {
   lib: new PhysD()
 }
-
 
 
   // game.addToCollisionGroup = function(spriteKey, collisionKey) {

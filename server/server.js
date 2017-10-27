@@ -2,6 +2,7 @@ var express = require('express');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io').listen(server);
+var PhysD = require('../physics/physd')
 
 app.use('/css',express.static(__dirname + '/css'));
 app.use('/js',express.static(__dirname + '/js'));
@@ -30,17 +31,26 @@ server.log = function(msg) {
   console.log(timestamp.toDateString() + " " + timestamp.toTimeString() + "   " + msg)
 }
 
+PhysD.lib.initializeSim()
+setInterval(PhysD.lib.stepSim, 15)
+
 io.on('connection',function(socket){
   socket.on('playerConnected',function(){
 
     socket.player = {
       id: socket.id,
       name: "pilot" + randomInt(0,10),
-      spawn_x: 0,
-      spawn_y: 0
+      ship: {}
     };
 
+    socket.player.ship = PhysD.lib.createBody({
+      x: randomInt(-400,400),
+      y: randomInt(-400,400),
+      rotation: randomInt(0,359)
+    })
+
     server.game.players[socket.id] = socket.player
+
     socket.emit('welcome', socket.player)
     socket.emit('universe',getUniverse());
     socket.broadcast.emit('playerConnected',socket.player);
@@ -49,7 +59,18 @@ io.on('connection',function(socket){
 
     socket.on('createProjectile', function(data) {
       // Create projectile locally
-      io.emit("createProjectile", data)
+      PhysD.lib.createBody(data)
+      socket.broadcast.emit("createProjectile", data)
+    })
+
+    socket.on('accelerateShip', function(amount) {
+      socket.player.ship.thrust(amount)
+      socket.broadcast.emit("accelerateBody", socket.player.id, amount)
+    })
+
+    socket.on('rotateShip', function(amount) {
+      socket.player.ship.rotateRight(amount)
+      socket.broadcast.emit("rotateBody", socket.player.id, amount)
     })
 
     socket.on('disconnect',function(){

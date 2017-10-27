@@ -100,6 +100,24 @@ var Game = function() {
     game.renderLayers[name] = []
   }
 
+  game.getSprite = function(key, layerName) {
+    var sprite = {}
+    game.renderLayers[layerName].forEach(function(s, i) {
+      if(s.key == key)
+        sprite = game.renderLayers[layerName][i]
+    })
+    return sprite
+  }
+
+  game.destroySprite = function(key, layerName) {
+    if(!key) return
+    game.physics.destroyBody(key)
+    game.renderLayers[layerName].forEach(function(sprite, i) {
+      if(sprite.key == key) {
+        delete game.renderLayers[sprite.layerName][i]
+      }
+    })
+  }
 
   game.addSprite = function(key, layerName, options) {
     if(!key) key = game.spriteID++
@@ -210,14 +228,24 @@ var Game = function() {
     sprite.frameCount = options.frameCount || 1
     sprite.tiled = options.tiled || false
     sprite.offsetRatio = options.offsetRatio || 0
+    sprite.frameMap = options.frameMap || {}
+    sprite.frame = {x:0, y:0, width: sprite.image.width, height: sprite.image.height}
 
     sprite.enablePhysics = function(engine, options) {
       var options = options || {}
+
       options.onDelete = function() {
         delete game.renderLayers[sprite.layerName][sprite.key]
         //console.log(sprite.key, sprite.layerName)
       }
+      // options.x = options.x || sprite.x || 0
+      // options.y = options.y || sprite.y || 0
       sprite.body = engine.createBody(options)
+    }
+
+    sprite.setFrame = function(key) {
+      console.log(key)
+      sprite.frame = sprite.frameMap[key]
     }
   }
 }
