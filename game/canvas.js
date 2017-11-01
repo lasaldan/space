@@ -20,27 +20,27 @@ var CanvasRenderer = function(targetSelector) {
     renderer.ctx.translate(renderer.camera.x() + renderer.width/2, renderer.camera.y() + renderer.height/2)
     game.renderOrder.forEach(function(layerId) {
       game.renderLayers[layerId].forEach(function(sprite) {
+
         if(sprite.tiled) {
-          renderer.drawTiledSprite(sprite.image, sprite.x, sprite.y)
+          renderer.drawTiledSprite(sprite.image, sprite.x, sprite.y, sprite.offsetRatio)
         }
-        else
-          renderer.drawSprite(sprite.image, (sprite.body)? sprite.body.x:sprite.x, (sprite.body)?sprite.body.y:sprite.y, (sprite.body)?sprite.body.rotation:sprite.rotation, sprite.scale)
+        else {
+          renderer.drawSprite(sprite.image, (sprite.body)? sprite.body.x:sprite.x, (sprite.body)?sprite.body.y:sprite.y, (sprite.body)?sprite.body.rotation:sprite.rotation, sprite.scale, sprite.frame)
+        }
       })
     })
     renderer.ctx.translate(-renderer.camera.x() - renderer.width/2, -renderer.camera.y() - renderer.height/2)
-    game.renderer.debugText("Speed: " + parseInt(game.sprites.ship.body.velocity.magnitude()))
-    game.renderer.debugText("Sector: " + parseInt(game.sprites.ship.body.x / 100) + ", " + parseInt(game.sprites.ship.body.y / 100))
 
   }
 
-  renderer.drawSprite = function(img,x,y,rotation,scale) {
+  renderer.drawSprite = function(img,x,y,rotation,scale,frame) {
     if(!scale) scale = 1
     if(!rotation) rotation = 0
-    var width = img.width*scale
-    var height = img.height*scale
+    var width = frame.width*scale
+    var height = frame.height*scale
     renderer.ctx.translate(x , y )
     renderer.ctx.rotate(rotation*Math.PI/180)
-    renderer.ctx.drawImage(img, -width/2, -width/2, width, height )
+    renderer.ctx.drawImage(img, frame.x, frame.y, frame.width, frame.height, -width/2, -width/2, width, height )
     renderer.ctx.rotate(-rotation*Math.PI/180)
     renderer.ctx.translate(-x , -y )
   }
@@ -52,7 +52,8 @@ var CanvasRenderer = function(targetSelector) {
     renderer.debugOffset += 14
   }
 
-  renderer.drawTiledSprite = function(img,x,y) {
+  renderer.drawTiledSprite = function(img,x,y,ratio) {
+    var ratio = ratio || 1
     renderer.ctx.translate(x, y)
     var pattern = renderer.ctx.createPattern(img, 'repeat')
     renderer.ctx.fillStyle = pattern
