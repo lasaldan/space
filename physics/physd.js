@@ -1,13 +1,12 @@
-var PhysD = function(worldWidth, worldHeight) {
+var PhysD = function() {
   var physics = this
-  physics.width = worldWidth
-  physics.height = worldHeight
   physics.damping = .997
 
   physics.collisionGroups = {}
 
   physics.bodies = []
   physics.lastStep = undefined
+  physics.stepCount = 0
   physics.NS_PER_SEC = 1e9
   physics.MS_PER_SEC = 1e6
   physics.initializeSim = function() {
@@ -16,7 +15,8 @@ var PhysD = function(worldWidth, worldHeight) {
   }
 
   physics.stepSim = function(time) {
-
+    physics.stepCount++
+    if((physics.stepCount %100) == 0) console.log(physics.stepCount)
     if(!time) {
       var now = process.hrtime()
       var nsStamp = now[0]*physics.NS_PER_SEC + now[1]

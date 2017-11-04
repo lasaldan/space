@@ -3,6 +3,9 @@ var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io').listen(server);
 var PhysD = require('../physics/physd')
+var GameData = require('./gamedata')
+
+var ServerPlayer = require('./player')
 
 app.use('/css',express.static(__dirname + '/css'));
 app.use('/js',express.static(__dirname + '/js'));
@@ -14,16 +17,17 @@ app.get('/',function(req,res){
 
 function Game() {
   return {
-    name: "Serenity",
-    players: {},
-    asteroids: [],
-    stations: [],
-    size: 5000,
-    background: "bg1.jpg"
+    data: {
+      name: "Serenity",
+      players: {},
+      asteroids: [],
+      stations: [],
+      background: "bg1.jpg"
+    },
+    lastProcessedInput: {}
   }
 }
 
-// var sim = new Phaser.Game(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio, Phaser.HEADLESS);
 server.game = new Game()
 
 server.log = function(msg) {
@@ -31,25 +35,57 @@ server.log = function(msg) {
   console.log(timestamp.toDateString() + " " + timestamp.toTimeString() + "   " + msg)
 }
 
+server.inputBuffer = []
+server.lastHandledInput = {}
+server.processInputs = function() {
+  // Process all pending messages from clients.
+  // expects input:
+  // {
+  //   playerId: "249jlaslkj34r_324jk",
+  //   method: "thrust",
+  //   params: [400],
+  //   sequenceNumber: 43
+  // }
+  if (server.inputBuffer.length)
+    console.log("STEP-------")
+  while (true) {
+
+    var input = server.inputBuffer.shift();
+    if (!input) {
+      break;
+    }
+    if (server.inputBuffer.length)
+      console.log(input)
+
+    var player = server.game.data.players[input.playerId];
+    player[input.method].apply(player, input.params);
+    server.lastHandledInput[input.playerId] = input.sequence_number;
+  }
+}
+
 PhysD.lib.initializeSim()
-setInterval(PhysD.lib.stepSim, 15)
+server.step = function() {
+  server.processInputs()
+  PhysD.lib.stepSim()
+  broadcastUniverse()
+}
+setInterval(server.step, 1000/30)
+
+Input = function(id, method, params, sequenceNumber) {
+  return {
+    playerId: id,
+    method: method,
+    params: params,
+    sequenceNumber: sequenceNumber
+  }
+}
 
 io.on('connection',function(socket){
   socket.on('playerConnected',function(){
 
-    socket.player = {
-      id: socket.id,
-      name: "pilot" + randomInt(0,10),
-      ship: {}
-    };
+    socket.player = new ServerPlayer(socket.id, PhysD.lib)
 
-    socket.player.ship = PhysD.lib.createBody({
-      x: randomInt(-400,400),
-      y: randomInt(-400,400),
-      rotation: randomInt(0,359)
-    })
-
-    server.game.players[socket.id] = socket.player
+    server.game.data.players[socket.id] = socket.player
 
     socket.emit('welcome', socket.player)
     socket.emit('universe',getUniverse());
@@ -57,30 +93,48 @@ io.on('connection',function(socket){
 
     server.log("Player Joined: "+socket.id)
 
-    socket.on('createProjectile', function(data) {
-      // Create projectile locally
-      PhysD.lib.createBody(data)
-      socket.broadcast.emit("createProjectile", data)
+    socket.on('fire', function(sequence) {
+      server.inputBuffer.push( new Input(socket.id, "fire", [], sequence) )
     })
 
-    socket.on('accelerateShip', function(amount) {
-      socket.player.ship.thrust(amount)
-      socket.broadcast.emit("accelerateBody", socket.player.id, amount)
+    socket.on('thrust', function(sequence) {
+      server.inputBuffer.push( new Input(socket.id, "thrust", [], sequence) )
     })
 
-    socket.on('rotateShip', function(amount) {
-      socket.player.ship.rotateRight(amount)
-      socket.broadcast.emit("rotateBody", socket.player.id, amount)
+    socket.on('reverse', function(sequence) {
+      server.inputBuffer.push( new Input(socket.id, "reverse", [], sequence) )
+    })
+
+    socket.on('rotateRight', function(sequence) {
+      server.inputBuffer.push( new Input(socket.id, "rotateRight", [], sequence) )
+    })
+
+    socket.on('rotateLeft', function(sequence) {
+      server.inputBuffer.push( new Input(socket.id, "rotateLeft", [500], sequence) )
     })
 
     socket.on('disconnect',function(){
-      delete server.game.players[socket.id]
+      delete server.game.data.players[socket.id]
       io.emit('playerDisconnected',socket.id);
       server.log("Player Disconnected: "+socket.id)
     });
+
   });
 });
 
+function transportBody(body) {
+  return {
+    x: body.x,
+    y: body.y,
+    rotation: body.rotation,
+    velocity: body.velocity,
+    acceleration: body.acceleration
+  }
+}
+
+function broadcastUniverse() {
+  io.emit("universe", getUniverse())
+}
 function getUniverse() {
   return server.game
 }

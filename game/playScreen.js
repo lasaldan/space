@@ -5,6 +5,10 @@ var PlayScreen = function(game) {
 
   state.loaded = false;
   state.ship = null
+  state.messageId = 0
+  state.nextAcc = 0
+  state.nextAngAcc = 0
+  state.playerInfo = {}
 
   var gameData = {
     name: "",
@@ -19,29 +23,41 @@ var PlayScreen = function(game) {
   }
 
   this.setupServerSocket = function() {
-    // this.Server.socket = io.connect("http://localhost:8081");
-    this.Server.socket = io.connect("http://d2f6ad84.ngrok.io");
+    this.Server.socket = io.connect("http://localhost:8081");
+    // this.Server.socket = io.connect("http://d2f6ad84.ngrok.io");
     //game.Client.socket = io.connect("http://bf863ee2.ngrok.io");
 
     this.Server.join = function(){
       this.socket.emit('playerConnected');
     };
 
-    this.Server.createProjectile = function(data) {
-      this.socket.emit('createProjectile', data)
+    this.Server.fire = function() {
+      this.socket.emit('fire', state.messageId++)
     }
 
-    this.Server.accelerateShip = function(amount) {
-      this.socket.emit('accelerateShip', amount)
+    this.Server.reverse = function() {
+      this.socket.emit('reverse', state.messageId++)
     }
 
-    this.Server.rotateShip = function(amount) {
-      this.socket.emit('rotateShip', amount)
+    this.Server.thrust = function() {
+      this.socket.emit('thrust', state.messageId++)
     }
 
-    this.Server.socket.on('createProjectile', function(data) {
+    this.Server.rotateRight = function() {
+      this.socket.emit('rotateRight', state.messageId++)
+    }
+
+    this.Server.rotateLeft = function() {
+      this.socket.emit('rotateLeft', state.messageId++)
+    }
+
+    this.Server.socket.on('fire', function(data) {
       var bullet = game.addSprite(null, "projectiles", {image: game.images.bullet})
       game.enablePhysicsOn(bullet.key, data)
+    })
+
+    this.Server.socket.on('removeProjectile', function() {
+      game.destroySprite()
     })
 
     this.Server.socket.on("accelerateBody", function(id, amount) {
@@ -54,8 +70,7 @@ var PlayScreen = function(game) {
 
     this.Server.socket.on('playerConnected',function(player){
       gameData.players[player.id] = player
-
-      var p = game.addSprite(player.id+"ship", "stage", {scale: .15, image: game.images.ship, frameMap: shipFrames})
+      var p = game.addSprite(player.id+"ship", "stage", {scale: .15, image: game.images.ship, frameMap: shipFrames, com: player.ship.com})
       p.setFrame("default")
       game.enablePhysicsOn(player.id+"ship", player.ship)
 
@@ -69,27 +84,27 @@ var PlayScreen = function(game) {
     });
 
     this.Server.socket.on('universe',function(data){
-      console.log("Universe", data);
-      Object.keys(data.players).forEach(function(p) {
-        var id = data.players[p].id
-        if(id != state.playerId) {
-          var ship = data.players[p].ship
-          var player = game.addSprite(id+"ship", "stage", {scale: .15, image: game.images.ship, frameMap: shipFrames})
-          player.setFrame("default")
-          game.enablePhysicsOn(id+"ship", ship)
-        }
-      })
-      gameData = data;
+      // console.log("universe", data);
+      // Object.keys(data.data.players).forEach(function(p) {
+      //   var id = data.players[p].id
+      //   if(id != state.playerId) {
+      //     var ship = data.players[p].ship
+      //     var player = game.addSprite(id+"ship", "stage", {scale: .15, image: game.images.ship, frameMap: shipFrames})
+      //     player.setFrame("default")
+      //     game.enablePhysicsOn(id+"ship", ship)
+      //   }
+      // })
+      // gameData = data;
     });
 
     this.Server.socket.on('welcome',function(data){
       console.log("Player Info:", data);
-      state.ship = game.addSprite("ship", "stage", {scale: .15, frameMap: shipFrames})
-      state.ship.nextFire = -1
-      state.ship.fireRate = 100
+      state.ship = game.addSprite("ship", "stage", {scale: .15, frameMap: shipFrames, com: data.ship.com})
+      state.weapon = data.ship.weapon
       state.playerId = data.id
+      state.playerInfo = data
 
-      game.enablePhysicsOn("ship", data.ship)
+      game.enablePhysicsOn("ship", data.ship.body)
 
       game.camera.track(state.ship)
       console.log("Welcome")
@@ -119,16 +134,8 @@ var PlayScreen = function(game) {
     this.nebula4 = game.addSprite("nebula4", "background", {x: -1000, y: -1000})
     this.alphaStation = game.addSprite("station", "background", {x: 0, y: 0})
     this.alphaStationProbes = game.addSprite("stationProbes", "background", {x: 0, y: 0})
-    //this.bg2 = game.addSprite("bg2", "background", {image: game.images.bg2, tiled: true, offsetRatio: 2})
-    // this.ship = game.addSprite("ship", "stage", {scale: .2, x: 0, y: 0})
-    // this.ship.nextFire = -1
-    // this.ship.fireRate = 300
-    //
-    // game.enablePhysicsOn("ship")
-    //
-    // game.camera.track(this.ship)
-    // this.loaded = true
-    console.log("waiting for server...")
+
+    console.log("waiting to join server...")
   }
 
   this.render = function() {
@@ -143,40 +150,51 @@ var PlayScreen = function(game) {
     this.alphaStationProbes.rotation -= .03
 
     if ( !state.loaded ) {
-      console.log("witing to hoin")
+      console.log("waiting for welcome message...")
       return
     }
 
     if(game.keyboard.keys.up) {
       state.ship.setFrame('accelerating')
-      state.ship.body.thrust(400)
-      this.Server.accelerateShip(400)
-
+      if(time > state.nextAcc) {
+        state.ship.body.thrust(state.playerInfo.ship.enginePower)
+        this.Server.thrust()
+        state.nextAcc = time + 1000/30
+      }
     }
     else if(game.keyboard.keys.down) {
-      state.ship.body.reverse(400)
-      this.Server.accelerateShip(-400)
+      if(time > state.nextAcc) {
+        state.ship.body.reverse(state.playerInfo.ship.enginePower)
+        this.Server.reverse()
+        state.nextAcc = time + 1000/30
+      }
     }
     else {
       state.ship.setFrame('default')
     }
 
     if(game.keyboard.keys.right) {
-      state.ship.body.rotateRight(150)
-      this.Server.rotateShip(150)
+      if(time > state.nextAngAcc) {
+        state.ship.body.rotateRight(state.playerInfo.ship.handling)
+        this.Server.rotateRight()
+        state.nextAngAcc = time + 1000/30
+      }
     }
     else if(game.keyboard.keys.left) {
-      state.ship.body.rotateLeft(150)
-      this.Server.rotateShip(-150)
+      if(time > state.nextAngAcc) {
+        state.ship.body.rotateLeft(state.playerInfo.ship.handling)
+        this.Server.rotateLeft()
+        state.nextAngAcc = time + 1000/30
+      }
     }
     else {
       // state.ship.body.angularVelocity *=.7
     }
 
     if(game.keyboard.keys.space) {
-      if (time > state.ship.nextFire)
+      if (time > state.weapon.nextFireTime)
       {
-        state.ship.nextFire = time + state.ship.fireRate;
+        state.weapon.nextFireTime = time + state.weapon.fireRate;
 
         var bullet = game.addSprite(null, "projectiles", {image: game.images.bullet})
         var x = state.ship.body.x + Math.sin(state.ship.body.rotation*Math.PI/180)*100
@@ -185,7 +203,7 @@ var PlayScreen = function(game) {
         var vy = state.ship.body.velocity.y - Math.cos(state.ship.body.rotation*Math.PI/180)*1000
         var definition = {lifespan: 3000, x: x, y: y, rotation: state.ship.body.rotation, frictionless: true, vx: vx, vy: vy}
         game.enablePhysicsOn(bullet.key, definition)
-        this.Server.createProjectile(definition)
+        this.Server.fire()
         //bullet.body.thrust(50000)
       }
     }
