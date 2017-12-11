@@ -16,7 +16,7 @@ var PhysD = function() {
 
   physics.stepSim = function(time) {
     physics.stepCount++
-    if((physics.stepCount %100) == 0) console.log(physics.stepCount)
+    // if((physics.stepCount %100) == 0) console.log(physics.stepCount)
     if(!time) {
       var now = process.hrtime()
       var nsStamp = now[0]*physics.NS_PER_SEC + now[1]
