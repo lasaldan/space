@@ -148,6 +148,8 @@ var PhysD = function() {
   }
 }
 
+if(typeof module == "undefined") module = {}
+
 module.exports = {
   lib: new PhysD()
 }
