@@ -24,6 +24,8 @@ var PlayScreen = function(game) {
 
   this.create = function() {
 
+    this.server = new Server()
+
     game.addRenderLayer("background")
     game.addRenderLayer("stage")
     game.addRenderLayer("projectiles")
