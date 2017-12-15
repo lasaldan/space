@@ -277,10 +277,7 @@ var Game = function() {
 
       options.onDelete = function() {
         delete game.renderLayers[sprite.layerName][sprite.key]
-        //console.log(sprite.key, sprite.layerName)
       }
-      // options.x = options.x || sprite.x || 0
-      // options.y = options.y || sprite.y || 0
       sprite.body = engine.createBody(options)
     }
 
