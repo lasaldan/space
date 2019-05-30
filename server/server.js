@@ -87,7 +87,7 @@ io.on('connection',function(socket){
 
     server.game.data.players[socket.id] = socket.player
 
-    socket.emit('welcome', socket.player)
+    socket.emit('welcomePlayer', socket.player)
     socket.emit('universe',getUniverse());
     socket.broadcast.emit('playerConnected',socket.player);
 
